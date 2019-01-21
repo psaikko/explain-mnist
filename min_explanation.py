@@ -11,14 +11,14 @@ mip_solver = Cplex()
 mip_solver.set_results_stream(None)
 mip_solver.set_warning_stream(None)
 mip_solver.set_error_stream(None)
-#mip_solver.parameters.threads.set(1)
+mip_solver.parameters.threads.set(1)
 
 hidden_weights = np.load("hidden_weights.npy")
 hidden_bias = np.load("hidden_bias.npy")
 output_weights = np.load("output_weights.npy")
 output_bias = np.load("output_bias.npy")
 
-#mip_solver.objective.set_sense(mip_solver.objective.sense.minimize)
+mip_solver.objective.set_sense(mip_solver.objective.sense.minimize)
 
 input_dim = 28*28
 hidden_nodes = 20
@@ -29,36 +29,35 @@ mip_solver.variables.add(
     types = "C",
     names = ["output"])
 
-for i in range(input_dim):
-    mip_solver.variables.add(
-        lb    = [0], 
-        ub    = [1],
-        types = "C",
-        names = ["x%d" % i])
+mip_solver.variables.add(
+    lb    = [0]*input_dim, 
+    ub    = [1]*input_dim,
+    types = "C"*input_dim,
+    names = ["x%d" % i for i in range(input_dim)])
+
+mip_solver.variables.add(
+    lb    = [0]*hidden_nodes, 
+    ub    = [cplex.infinity]*hidden_nodes,
+    types = "C"*hidden_nodes,
+    names = ["y%d" % i for i in range(hidden_nodes)])
+mip_solver.variables.add(
+    lb    = [0]*hidden_nodes, 
+    ub    = [cplex.infinity]*hidden_nodes,
+    types = "C"*hidden_nodes,
+    names = ["s%d" % i for i in range(hidden_nodes)])
+mip_solver.variables.add(
+    lb    = [0]*hidden_nodes, 
+    ub    = [1]*hidden_nodes,
+    types = "B"*hidden_nodes,
+    names = ["z%d" % i for i in range(hidden_nodes)])
 
 for i in range(hidden_nodes):
-    mip_solver.variables.add(
-        lb    = [0], 
-        ub    = [cplex.infinity],
-        types = "C",
-        names = ["y%d" % i])
-    mip_solver.variables.add(
-        lb    = [0], 
-        ub    = [cplex.infinity],
-        types = "C",
-        names = ["s%d" % i])
-    mip_solver.variables.add(
-        lb    = [0], 
-        ub    = [1],
-        types = "B",
-        names = ["z%d" % i])
-
     mip_solver.indicator_constraints.add(
         indvar="z%d" % i,
         complemented=1,
         rhs=0.0,
         sense="E",
-        lin_expr=cplex.SparsePair(ind=["y%d" % i], val=[1.0]),
+        lin_expr=(["y%d" % i], [1.0]),
         name="ind%d-1" % i,
         indtype=mip_solver.indicator_constraints.type_.if_)
 
@@ -67,23 +66,23 @@ for i in range(hidden_nodes):
         complemented=0,
         rhs=0.0,
         sense="E",
-        lin_expr=cplex.SparsePair(ind=["s%d" % i], val=[1.0]),
+        lin_expr=(["s%d" % i], [1.0]),
         name="ind%d-0" % i,
         indtype=mip_solver.indicator_constraints.type_.if_)
 
 # encode hidden layer
 for i in range(hidden_nodes):
-        a_i = hidden_weights[:,i]
-        cplex_vars  = ["x%d"%j for j in range(input_dim)] + ["y%d" % i, "s%d" % i]
-        cplex_coefs = list(a_i) + [-1, 1]
-        cplex_coefs = [float(v) for v in cplex_coefs] # why?!
+    a_i = hidden_weights[:,i]
+    cplex_vars  = ["x%d"%j for j in range(input_dim)] + ["y%d" % i, "s%d" % i]
+    cplex_coefs = list(a_i) + [-1, 1]
+    cplex_coefs = [float(v) for v in cplex_coefs] # why?!
 
-        mip_solver.linear_constraints.add(
-            lin_expr = [[cplex_vars, cplex_coefs]],
-            senses   = "E",
-            rhs      = [float(-hidden_bias[i])],
-            names    = ["hidden_sum %d" % i]
-        )
+    mip_solver.linear_constraints.add(
+        lin_expr = [[cplex_vars, cplex_coefs]],
+        senses   = "E",
+        rhs      = [float(-hidden_bias[i])],
+        names    = ["hidden_sum %d" % i]
+    )
 
 # encode output layer 
 out_vars  = ["y%d"%j for j in range(hidden_nodes)] + ["output"]
@@ -103,7 +102,8 @@ Y_pred = np.load("Y_pred.npy")
 
 test_index = 0
 
-#for (input_image, output_label) in zip(X,Y):
+# for (input_image, output_label) in zip(X,Y):
+
 mus = set()
 cube = set(range(input_dim))
 while len(cube) > 0:
