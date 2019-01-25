@@ -20,8 +20,8 @@ output_bias = np.load("output_bias.npy")
 #mip_solver.objective.set_sense(mip_solver.objective.sense.minimize)
 
 input_dim  = 28
-n_kernels  = 16
-pool_dim   = 4
+n_kernels  = 10
+pool_dim   = 6
 kernel_dim = 3
 
 kernel_res_w = 28 - kernel_dim + 1
@@ -244,6 +244,20 @@ for target in range(10):
         mip_solver.solve()
         print(mip_solver.solution.get_status_string())
         print("prediction",mip_solver.solution.get_values(["o%d"%i for i in range(10)]))
+
+        vs = mip_solver.solution.get_values(["x(%d,%d)" % (i,j) for i in range(input_dim) for j in range(input_dim)])
+
+        plt.subplots(1,2)
+
+        plt.subplot(1,2,1)
+        plt.imshow(input_image.reshape(28,28))
+        plt.title("original")
+
+        plt.subplot(1,2,2)
+        plt.imshow(np.array(vs).reshape(28,28))
+        plt.title("adversarial input")
+
+        plt.show()
 
     except CplexError as e:
         print(e)
