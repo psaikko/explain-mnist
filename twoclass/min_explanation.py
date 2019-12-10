@@ -11,7 +11,7 @@ mip_solver = Cplex()
 mip_solver.set_results_stream(None)
 mip_solver.set_warning_stream(None)
 mip_solver.set_error_stream(None)
-mip_solver.parameters.threads.set(1)
+#mip_solver.parameters.threads.set(1)
 
 hidden_weights = np.load("hidden_weights.npy")
 hidden_bias = np.load("hidden_bias.npy")
@@ -102,26 +102,20 @@ Y_pred = np.load("Y_pred.npy")
 
 test_index = 0
 
-# for (input_image, output_label) in zip(X,Y):
-
 mus = set()
 cube = set(range(input_dim))
 while len(cube) > 0:
+    # TODO: consider different orders for removing features
     test_feature = list(cube)[0]
     cube.remove(test_feature)
 
     input_image = X[test_index]
     prediction  = 1 if Y_pred[test_index] > 0.5 else 0
-    #print(input_image)
-
-    #print("NN prediction",prediction)
-    #break
 
     # fix variables in mus and cube
     mip_solver.variables.set_lower_bounds([
       ("x%d"%i, x)  for (i,x) in enumerate(input_image) if i in mus.union(cube)
     ])
-
     mip_solver.variables.set_upper_bounds([
       ("x%d"%i, x)  for (i,x) in enumerate(input_image) if i in mus.union(cube)
     ])
@@ -130,15 +124,11 @@ while len(cube) > 0:
     mip_solver.variables.set_lower_bounds([
       ("x%d"%i, 0) for i in range(input_dim) if i not in mus.union(cube)
     ])
-
     mip_solver.variables.set_upper_bounds([
       ("x%d"%i, 1) for i in range(input_dim) if i not in mus.union(cube)
     ])
     
     # can we make prediction of opposite class?
-
-    #print("testing prediction", 1 - prediction)
-
     if prediction == 1:
         mip_solver.variables.set_upper_bounds([("output", 0)])
         mip_solver.variables.set_lower_bounds([("output", -cplex.infinity)])
@@ -146,25 +136,31 @@ while len(cube) > 0:
         mip_solver.variables.set_lower_bounds([("output", 0)])
         mip_solver.variables.set_upper_bounds([("output", cplex.infinity)])
 
-    #mip_solver.write("debug.lp")
-
     try:
         mip_solver.solve()
         if mip_solver.solution.get_status_string() == "integer infeasible":
             raise CplexError()
-        # ok
-        #mus.add(test_feature)
-        #output = mip_solver.solution.get_values(["output"])
-        #print("solution exists with output", output)
+        # Solution found when test_feature not fixed 
+        # Add it to MUS
         mus.add(test_feature)
-        print("MUS", test_feature)
+        print("in MUS", test_feature)
     except CplexError:
-        # no solution
+        # No solution despite releasing test_feature 
         print("DROP", test_feature)
 
-print(len(mus))
+print("Found minimal explanation of",len(mus),"pixels")
 
+
+plt.subplots(1,2)
+plt.subplot(1,2,1)
+plt.title("Original")
 plt.imshow(X[test_index].reshape((28,28)), cmap='gray')
-expl = np.array([1 if i in mus else 0 for (i,x) in enumerate(X[0])])
-plt.imshow(expl.reshape((28,28)), cmap='summer', alpha=0.6)
+
+expl = np.array([(x,x,x,1) if i in mus else (0,0,0,0) for (i,x) in enumerate(X[0])])
+plt.subplot(1,2,2)
+plt.title("Minimal explanation")
+plt.gca().set_facecolor('xkcd:lime')
+plt.imshow(expl.reshape((28,28,4)))
+
+plt.savefig("explanation.png")
 plt.show()
