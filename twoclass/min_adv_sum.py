@@ -11,14 +11,12 @@ mip_solver = Cplex()
 # mip_solver.set_results_stream(None)
 # mip_solver.set_warning_stream(None)
 # mip_solver.set_error_stream(None)
-#mip_solver.parameters.threads.set(1)
+# mip_solver.parameters.threads.set(1)
 
 hidden_weights = np.load("hidden_weights.npy")
 hidden_bias = np.load("hidden_bias.npy")
 output_weights = np.load("output_weights.npy")
 output_bias = np.load("output_bias.npy")
-
-#mip_solver.objective.set_sense(mip_solver.objective.sense.minimize)
 
 input_dim = 28*28
 hidden_nodes = 20
@@ -136,7 +134,8 @@ for i in range(input_dim):
         names    = ["diff %d" % i]
     )
 
-# minimize sum_i x_diff_i^2
+# Create quadratic objective function to minimize 
+# the sum of squared pertubations (xd variables) on the input
 mip_solver.parameters.optimalitytarget.set(
     mip_solver.parameters.optimalitytarget.values.optimal_global)
 mip_solver.objective.set_sense(mip_solver.objective.sense.minimize)
@@ -144,11 +143,17 @@ mip_solver.objective.set_quadratic_coefficients([
     ["xd%d"%i, "xd%d"%i, 2] for i in range(input_dim)
 ])
 
+# Set target for objective function
+# Recall from train_twoclass.py that 
+# label 0 -> "1"
+# label 1 -> "3"
+# The MIP encoding does not model the sigmoid activation on output
+# So predicted label should be taken as sigmoid(output)
 if prediction == 1:
-    mip_solver.variables.set_upper_bounds([("output", -.001)])
+    mip_solver.variables.set_upper_bounds([("output", -.5)])
     mip_solver.variables.set_lower_bounds([("output", -cplex.infinity)])
 else:
-    mip_solver.variables.set_lower_bounds([("output", .001)])
+    mip_solver.variables.set_lower_bounds([("output", 5)])
     mip_solver.variables.set_upper_bounds([("output", cplex.infinity)])
 
 try:
@@ -156,25 +161,26 @@ try:
     mip_solver.solve()
     print(mip_solver.solution.get_status_string())
     opt = mip_solver.solution.get_objective_value()
-    print(opt)
-    print("change",input_dim - opt,"pixels")
-    
-    #print(vs)
-    print("prediction",mip_solver.solution.get_values(["output"]))
+    print("Sum of squared differences:",opt)
+    print("Objective function value:",mip_solver.solution.get_values(["output"]))
 
     plt.subplots(1,3)
     plt.subplot(1,3,1)
     vs = mip_solver.solution.get_values(["xi%d"%i for i in range(input_dim)])
     plt.imshow(np.array(vs).reshape((28,28)), cmap='gray', norm=None, vmin=0, vmax=1)
     plt.title("Input")
+
     plt.subplot(1,3,2)
     vs = mip_solver.solution.get_values(["xd%d"%i for i in range(input_dim)])
     plt.imshow(np.array(vs).reshape((28,28)), cmap='gray', norm=None, vmin=0, vmax=1)
     plt.title("Diff")
+
     plt.subplot(1,3,3)
     vs = mip_solver.solution.get_values(["x%d"%i for i in range(input_dim)])
     plt.imshow(np.array(vs).reshape((28,28)), cmap='gray', norm=None, vmin=0, vmax=1)
     plt.title("Result")
+
+    plt.savefig("min_adversarial_sse.png")
     plt.show()
     
 except CplexError as e:
