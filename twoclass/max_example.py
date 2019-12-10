@@ -18,11 +18,13 @@ hidden_bias = np.load("hidden_bias.npy")
 output_weights = np.load("output_weights.npy")
 output_bias = np.load("output_bias.npy")
 
-#mip_solver.objective.set_sense(mip_solver.objective.sense.minimize)
-
 input_dim = 28*28
 hidden_nodes = 20
 
+#mip_solver.objective.set_sense(mip_solver.objective.sense.minimize)
+mip_solver.objective.set_sense(mip_solver.objective.sense.maximize)
+
+# Set the value of the output variable as objective function
 mip_solver.variables.add(
     obj = [1],
     lb = [-cplex.infinity],
@@ -52,6 +54,7 @@ mip_solver.variables.add(
     types = "B"*hidden_nodes,
     names = ["z%d" % i for i in range(hidden_nodes)])
 
+# Encode nonlinearities (ReLU) using indicator constraints
 for i in range(hidden_nodes):
     mip_solver.indicator_constraints.add(
         indvar="z%d" % i,
@@ -71,7 +74,7 @@ for i in range(hidden_nodes):
         name="ind%d-0" % i,
         indtype=mip_solver.indicator_constraints.type_.if_)
 
-# encode hidden layer
+# Encode hidden layer
 for i in range(hidden_nodes):
     a_i = hidden_weights[:,i]
     cplex_vars  = ["x%d"%j for j in range(input_dim)] + ["y%d" % i, "s%d" % i]
@@ -85,7 +88,7 @@ for i in range(hidden_nodes):
         names    = ["hidden_sum %d" % i]
     )
 
-# encode output layer 
+# Encode output layer 
 out_vars  = ["y%d"%j for j in range(hidden_nodes)] + ["output"]
 out_coefs = list(output_weights) + [-1]
 out_coefs = [float(v) for v in out_coefs]
@@ -97,12 +100,6 @@ mip_solver.linear_constraints.add(
     names    = ["output_sum"]
 )
 
-X = np.load("X.npy")
-Y = np.load("Y.npy")
-Y_pred = np.load("Y_pred.npy")
-
-mip_solver.objective.set_sense(mip_solver.objective.sense.maximize)
-
 try:
     mip_solver.solve()
     print(mip_solver.solution.get_status_string())
@@ -110,80 +107,11 @@ try:
     print(opt)
 
     vs = mip_solver.solution.get_values(["x%d"%i for i in range(input_dim)])
-    #print(vs)
-    print("prediction",mip_solver.solution.get_values(["output"]))
+    print("Objective value:", mip_solver.solution.get_values(["output"]))
+
+    plt.title("Objective-maximizing input")
     plt.imshow(np.array(vs).reshape((28,28)), cmap='gray')
     plt.show()
     
 except CplexError as e:
     print(e)
-
-
-
-#mip_solver.write("debug.lp")
-
-## for (input_image, output_label) in zip(X,Y):
-# mus = set()
-# cube = set(range(input_dim))
-# while len(cube) > 0:
-#     test_feature = list(cube)[0]
-#     cube.remove(test_feature)
-
-#     input_image = X[test_index]
-#     prediction  = 1 if Y_pred[test_index] > 0.5 else 0
-#     #print(input_image)
-
-#     #print("NN prediction",prediction)
-#     #break
-
-#     # fix variables in mus and cube
-#     mip_solver.variables.set_lower_bounds([
-#       ("x%d"%i, x)  for (i,x) in enumerate(input_image) if i in mus.union(cube)
-#     ])
-
-#     mip_solver.variables.set_upper_bounds([
-#       ("x%d"%i, x)  for (i,x) in enumerate(input_image) if i in mus.union(cube)
-#     ])
-
-#     # unfix all others
-#     mip_solver.variables.set_lower_bounds([
-#       ("x%d"%i, 0) for i in range(input_dim) if i not in mus.union(cube)
-#     ])
-
-#     mip_solver.variables.set_upper_bounds([
-#       ("x%d"%i, 1) for i in range(input_dim) if i not in mus.union(cube)
-#     ])
-    
-#     # can we make prediction of opposite class?
-
-#     #print("testing prediction", 1 - prediction)
-
-#     if prediction == 1:
-#         mip_solver.variables.set_upper_bounds([("output", 0)])
-#         mip_solver.variables.set_lower_bounds([("output", -cplex.infinity)])
-#     else:
-#         mip_solver.variables.set_lower_bounds([("output", 0)])
-#         mip_solver.variables.set_upper_bounds([("output", cplex.infinity)])
-
-#     #mip_solver.write("debug.lp")
-
-#     try:
-#         mip_solver.solve()
-#         if mip_solver.solution.get_status_string() == "integer infeasible":
-#             raise CplexError()
-#         # ok
-#         #mus.add(test_feature)
-#         #output = mip_solver.solution.get_values(["output"])
-#         #print("solution exists with output", output)
-#         mus.add(test_feature)
-#         print("MUS", test_feature)
-#     except CplexError:
-#         # no solution
-#         print("DROP", test_feature)
-
-# print(len(mus))
-
-# plt.imshow(X[test_index].reshape((28,28)), cmap='gray')
-# expl = np.array([1 if i in mus else 0 for (i,x) in enumerate(X[0])])
-# plt.imshow(expl.reshape((28,28)), cmap='summer', alpha=0.6)
-# plt.show()
