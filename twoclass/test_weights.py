@@ -8,16 +8,20 @@ def sigmoid(x):
 X = np.load("X.npy")
 Y = np.load("Y.npy")
 
+# Test that we can load weights from file
 hidden_weights = np.load("hidden_weights.npy")
 hidden_bias = np.load("hidden_bias.npy")
 output_weights = np.load("output_weights.npy")
 output_bias = np.load("output_bias.npy")
 
+# Test our interpretation of the NN structure
 def predict(x):
     hidden_out = x @ hidden_weights + hidden_bias
     hidden_out = hidden_out * (hidden_out > 0)    # relu
     output = hidden_out @ output_weights + output_bias
     return (output[0] > 0)*1
 
-print([predict(x) for x in X[:10]])
-print(Y[:10])
+correct = 0
+for x,y in zip(X,Y):
+  if y == predict(x): correct += 1
+print("Accuracy: %.4f" % (correct / len(Y)))
