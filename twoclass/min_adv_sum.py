@@ -172,7 +172,7 @@ try:
 
     plt.subplot(1,3,2)
     vs = mip_solver.solution.get_values(["xd%d"%i for i in range(input_dim)])
-    plt.imshow(np.array(vs).reshape((28,28)), cmap='gray', norm=None, vmin=0, vmax=1)
+    plt.imshow(np.array(vs).reshape((28,28)), cmap='summer', norm=None, vmin=0, vmax=1)
     plt.title("Diff")
 
     plt.subplot(1,3,3)
