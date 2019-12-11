@@ -37,17 +37,15 @@ history = model.fit(x_train, y_train_cat, epochs=10, batch_size=32)
 
 score = model.evaluate(x_test, y_test_cat, batch_size=32)
 
-print(score)
+print("Scores",score)
 
 wts = model.get_weights()
-
-y_pred = model.predict(x_test, batch_size=32)
-
 np.save("convo_weights_1", wts[0])
 np.save("convo_bias_1", wts[1])
 np.save("output_weights", wts[2])
 np.save("output_bias", wts[3])
 
+y_pred = model.predict(x_test, batch_size=32)
 np.save("X", x_test)
 np.save("Y", y_test_cat)
 np.save("Y_pred", y_pred)
