@@ -249,7 +249,6 @@ mip_solver.objective.set_quadratic_coefficients([
 mip_solver.write("debug.lp")
 
 for target in range(10):
-
     ct = 0
     for cl in range(10):
         if target != cl:
@@ -260,7 +259,6 @@ for target in range(10):
                 names    = ["obj_constr_%d" % ct]
             )
             ct += 1
-
     try:
         mip_solver.solve()
         print(mip_solver.solution.get_status_string())
@@ -273,16 +271,16 @@ for target in range(10):
         plt.subplots(1,3)
 
         plt.subplot(1,3,1)
-        plt.imshow(input_image.reshape(28,28))
-        plt.title("original")
+        plt.imshow(input_image.reshape(28,28),cmap="gray")
+        plt.title("Original")
 
         plt.subplot(1,3,2)
-        plt.imshow(np.array(ds).reshape(28,28))
-        plt.title("difference")
+        plt.imshow(np.array(ds).reshape(28,28),cmap="summer")
+        plt.title("Difference")
 
         plt.subplot(1,3,3)
-        plt.imshow(np.array(vs).reshape(28,28))
-        plt.title("adversarial input")
+        plt.imshow(np.array(vs).reshape(28,28),cmap="gray")
+        plt.title("Predict %d" % target)
 
         plt.show()
 
