@@ -8,10 +8,10 @@ import matplotlib.pyplot as plt
 
 mip_solver = Cplex()
 
-# mip_solver.set_results_stream(None)
-# mip_solver.set_warning_stream(None)
-# mip_solver.set_error_stream(None)
-#mip_solver.parameters.threads.set(1)
+mip_solver.set_results_stream(None)
+mip_solver.set_warning_stream(None)
+mip_solver.set_error_stream(None)
+# mip_solver.parameters.threads.set(1)
 
 hidden_weights = [np.load("hidden_weights_1.npy"), np.load("hidden_weights_2.npy")]
 hidden_bias = [np.load("hidden_bias_1.npy"), np.load("hidden_bias_2.npy")]
@@ -121,38 +121,6 @@ X = np.load("X.npy")
 Y = np.load("Y.npy")
 Y_pred = np.load("Y_pred.npy")
 
-
-# for test_index in range(10):
-#     input_image = X[test_index]
-#     prediction = max((cl,i) for (i,cl) in enumerate(Y_pred[test_index]))
-
-#     #print(prediction)
-
-#     real = max((cl,i) for (i,cl) in enumerate(Y[test_index]))
-#     #print(real)
-
-#     # plt.imshow(np.array(input_image).reshape((28,28)), cmap="gray")
-#     # plt.show()
-
-#     # fix variables in mus and cube
-#     mip_solver.variables.set_lower_bounds([
-#         ("x%d"%i, x)  for (i,x) in enumerate(input_image)
-#     ])
-
-#     mip_solver.variables.set_upper_bounds([
-#         ("x%d"%i, x)  for (i,x) in enumerate(input_image)
-#     ])
-
-#     try:
-#         mip_solver.write("debug.lp")
-#         mip_solver.solve()
-#         output = mip_solver.solution.get_values(["o%d"%i for i in range(output_nodes)])
-#         mip_prediction = max((cl,i) for (i,cl) in enumerate(output))[1]
-#         #print(output)
-#         print(mip_prediction)
-#     except CplexError as e:
-#         print(e)
-
 test_index = 0
 input_image = X[test_index]
 prediction = max((cl,i) for (i,cl) in enumerate(Y_pred[test_index]))
@@ -198,9 +166,11 @@ mip_solver.objective.set_quadratic_coefficients([
 
 images = []
 
+# Loop over target labels for input_image
 for target in range(10):
     ct = 0
     for cl in range(10):
+        # For classes other than target, constrain output variable to small value
         if target != cl:
             mip_solver.linear_constraints.add(
                 lin_expr = [[["o%d"%target, "o%d"%cl], [1,-1]]],
@@ -209,32 +179,12 @@ for target in range(10):
                 names    = ["obj_constr_%d" % ct]
             )
             ct += 1
-
     try:
-        #mip_solver.write("debug.lp")
         mip_solver.solve()
         print(mip_solver.solution.get_status_string())
         opt = mip_solver.solution.get_objective_value()
         print(opt)
-        print("change",input_dim - opt,"pixels")
-        
-        #print(vs)
-        #print("prediction",mip_solver.solution.get_values(["output"]))
-# 
-        # plt.subplots(1,3)
-        # plt.subplot(1,3,1)
-        # vs = mip_solver.solution.get_values(["xi%d"%i for i in range(input_dim)])
-        # plt.imshow(np.array(vs).reshape((28,28)), cmap='gray', norm=None, vmin=0, vmax=1)
-        # plt.title("Input")
-        # plt.subplot(1,3,2)
-        # vs = mip_solver.solution.get_values(["xd%d"%i for i in range(input_dim)])
-        # plt.imshow(np.array(vs).reshape((28,28)), cmap='gray', norm=None, vmin=0, vmax=1)
-        # plt.title("Diff")
-        # plt.subplot(1,3,3)
-        # vs = mip_solver.solution.get_values(["x%d"%i for i in range(input_dim)])
-        # plt.imshow(np.array(vs).reshape((28,28)), cmap='gray', norm=None, vmin=0, vmax=1)
-        # plt.title("Result")
-        # plt.show()
+        print("Change",input_dim - opt,"pixels")
 
         vs = mip_solver.solution.get_values(["x%d"%i for i in range(input_dim)])
         images.append(np.array(vs))
@@ -245,48 +195,16 @@ for target in range(10):
     # remove constraint on output
     mip_solver.linear_constraints.delete(["obj_constr_%d"%i for i in range(ct)])
     
-
 np.save("output", np.array(images))
 
-plt.subplots(1,10)
+plt.subplots(2,10)
 for i,img in enumerate(images):
-    plt.subplot(1,10,i+1)
+    plt.subplot(2,10,i+1)
     plt.imshow(img.reshape((28,28)), cmap='gray')
-    plt.title("%d"%(i))
+    plt.title("Predict %d"%(i))
+for i,img in enumerate(images):
+    plt.subplot(2,10,10+i+1)
+    diff = img - input_image
+    plt.imshow(diff.reshape((28,28)), cmap='summer')
+    plt.title("Diff")
 plt.show()
-
-# if prediction == 1:
-#     mip_solver.variables.set_upper_bounds([("output", -.001)])
-#     mip_solver.variables.set_lower_bounds([("output", -cplex.infinity)])
-# else:
-#     mip_solver.variables.set_lower_bounds([("output", .001)])
-#     mip_solver.variables.set_upper_bounds([("output", cplex.infinity)])
-
-# try:
-#     mip_solver.write("debug.lp")
-#     mip_solver.solve()
-#     print(mip_solver.solution.get_status_string())
-#     opt = mip_solver.solution.get_objective_value()
-#     print(opt)
-#     print("change",input_dim - opt,"pixels")
-    
-#     #print(vs)
-#     print("prediction",mip_solver.solution.get_values(["output"]))
-
-#     plt.subplots(1,3)
-#     plt.subplot(1,3,1)
-#     vs = mip_solver.solution.get_values(["xi%d"%i for i in range(input_dim)])
-#     plt.imshow(np.array(vs).reshape((28,28)), cmap='gray', norm=None, vmin=0, vmax=1)
-#     plt.title("Input")
-#     plt.subplot(1,3,2)
-#     vs = mip_solver.solution.get_values(["xd%d"%i for i in range(input_dim)])
-#     plt.imshow(np.array(vs).reshape((28,28)), cmap='gray', norm=None, vmin=0, vmax=1)
-#     plt.title("Diff")
-#     plt.subplot(1,3,3)
-#     vs = mip_solver.solution.get_values(["x%d"%i for i in range(input_dim)])
-#     plt.imshow(np.array(vs).reshape((28,28)), cmap='gray', norm=None, vmin=0, vmax=1)
-#     plt.title("Result")
-#     plt.show()
-    
-# except CplexError as e:
-#     print(e)
