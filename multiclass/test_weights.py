@@ -26,6 +26,10 @@ print(output_bias.shape)
 def from_onehot(x):
   return max((cl,i) for (i,cl) in enumerate(x))[1]
 
+#
+# Test that we can replicate the results of the trained model 
+# from the saved weights
+#
 def predict(x):
     hidden_out_1 = x @ hidden_weights_1 + hidden_bias_1
     hidden_out_1 = hidden_out_1 * (hidden_out_1 > 0)    # relu
@@ -34,10 +38,12 @@ def predict(x):
     hidden_out_2 = hidden_out_2 * (hidden_out_2 > 0)    # relu
 
     output = hidden_out_2 @ output_weights + output_bias
-    print(output)
+    #print(output)
     return from_onehot(output)
 
-X = np.load("output.npy")
-print([predict(x) for x in X[:10]])
-print(list(map(from_onehot, Y[:10])))
+# Count correct predictions on training set
+correct = 0
+for x,y in zip(X,Y):
+  if from_onehot(y) == predict(x): correct += 1
+print("Accuracy: %.4f" % (correct / len(Y)))
 
