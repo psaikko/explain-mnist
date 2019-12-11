@@ -170,37 +170,6 @@ X = np.load("X.npy")
 Y = np.load("Y.npy")
 Y_pred = np.load("Y_pred.npy")
 
-# for test_index in range(10):
-#     input_image = X[test_index]
-#     prediction = max((cl,i) for (i,cl) in enumerate(Y_pred[test_index]))
-
-#     #print(prediction)
-
-#     real = max((cl,i) for (i,cl) in enumerate(Y[test_index]))
-#     #print(real)
-
-#     # plt.imshow(np.array(input_image).reshape((28,28)), cmap="gray")
-#     # plt.show()
-
-#     # fix variables in mus and cube
-#     mip_solver.variables.set_lower_bounds([
-#         ("x%d"%i, x)  for (i,x) in enumerate(input_image)
-#     ])
-
-#     mip_solver.variables.set_upper_bounds([
-#         ("x%d"%i, x)  for (i,x) in enumerate(input_image)
-#     ])
-
-#     try:
-#         mip_solver.write("debug.lp")
-#         mip_solver.solve()
-#         output = mip_solver.solution.get_values(["o%d"%i for i in range(output_nodes)])
-#         mip_prediction = max((cl,i) for (i,cl) in enumerate(output))[1]
-#         #print(output)
-#         print(mip_prediction)
-#     except CplexError as e:
-#         print(e)
-
 test_index = 0
 input_image = X[test_index]
 prediction = max((cl,i) for (i,cl) in enumerate(Y_pred[test_index]))
@@ -243,19 +212,23 @@ for target in range(10):
     try:
         mip_solver.solve()
         print(mip_solver.solution.get_status_string())
-        print("prediction",mip_solver.solution.get_values(["o%d"%i for i in range(10)]))
+        print("Prediction",mip_solver.solution.get_values(["o%d"%i for i in range(10)]))
 
+        plt.subplots(1,3)
+
+        plt.subplot(1,3,1)
+        plt.imshow(input_image.reshape((28,28)), cmap='gray')
+        plt.title("Input image")
+
+        plt.subplot(1,3,2)
+        vs = mip_solver.solution.get_values(["xz(%d,%d)" % (i,j) for i in range(input_dim) for j in range(input_dim)])
+        plt.imshow(np.array(vs).reshape((28,28)), cmap='summer')
+        plt.title("Unlocked pixels")
+
+        plt.subplot(1,3,3)
         vs = mip_solver.solution.get_values(["x(%d,%d)" % (i,j) for i in range(input_dim) for j in range(input_dim)])
-
-        plt.subplots(1,2)
-
-        plt.subplot(1,2,1)
-        plt.imshow(input_image.reshape(28,28))
-        plt.title("original")
-
-        plt.subplot(1,2,2)
-        plt.imshow(np.array(vs).reshape(28,28))
-        plt.title("adversarial input")
+        plt.imshow(np.array(vs).reshape((28,28)), cmap='gray')
+        plt.title("Predict %d" % target)
 
         plt.show()
 
