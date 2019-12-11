@@ -100,7 +100,7 @@ X = np.load("X.npy")
 Y = np.load("Y.npy")
 Y_pred = np.load("Y_pred.npy")
 
-test_index = 0
+test_index = 2
 
 mip_solver.variables.add(
     obj   = [1]*input_dim,
@@ -135,82 +135,27 @@ try:
     print(mip_solver.solution.get_status_string())
     opt = mip_solver.solution.get_objective_value()
     print(opt)
-    print("change",input_dim - opt,"pixels")
+    print("Changed",input_dim - opt,"pixels")
+    print("Objective fn value:",mip_solver.solution.get_values(["output"]))
+
+    plt.subplots(1,3)
+
+    plt.subplot(1,3,1)
+    plt.imshow(input_image.reshape((28,28)), cmap='gray')
+    plt.title("Input image")
+
+    plt.subplot(1,3,2)
+    vs = mip_solver.solution.get_values(["xz%d"%i for i in range(input_dim)])
+    plt.imshow(np.array(vs).reshape((28,28)), cmap='summer')
+    plt.title("Unlocked pixels")
+
+    plt.subplot(1,3,3)
     vs = mip_solver.solution.get_values(["x%d"%i for i in range(input_dim)])
-    #print(vs)
-    print("prediction",mip_solver.solution.get_values(["output"]))
     plt.imshow(np.array(vs).reshape((28,28)), cmap='gray')
+    plt.title("Result image")
+
+    plt.savefig("min_adversarial_card.png")
     plt.show()
     
 except CplexError as e:
     print(e)
-
-
-
-#mip_solver.write("debug.lp")
-
-## for (input_image, output_label) in zip(X,Y):
-# mus = set()
-# cube = set(range(input_dim))
-# while len(cube) > 0:
-#     test_feature = list(cube)[0]
-#     cube.remove(test_feature)
-
-#     input_image = X[test_index]
-#     prediction  = 1 if Y_pred[test_index] > 0.5 else 0
-#     #print(input_image)
-
-#     #print("NN prediction",prediction)
-#     #break
-
-#     # fix variables in mus and cube
-#     mip_solver.variables.set_lower_bounds([
-#       ("x%d"%i, x)  for (i,x) in enumerate(input_image) if i in mus.union(cube)
-#     ])
-
-#     mip_solver.variables.set_upper_bounds([
-#       ("x%d"%i, x)  for (i,x) in enumerate(input_image) if i in mus.union(cube)
-#     ])
-
-#     # unfix all others
-#     mip_solver.variables.set_lower_bounds([
-#       ("x%d"%i, 0) for i in range(input_dim) if i not in mus.union(cube)
-#     ])
-
-#     mip_solver.variables.set_upper_bounds([
-#       ("x%d"%i, 1) for i in range(input_dim) if i not in mus.union(cube)
-#     ])
-    
-#     # can we make prediction of opposite class?
-
-#     #print("testing prediction", 1 - prediction)
-
-#     if prediction == 1:
-#         mip_solver.variables.set_upper_bounds([("output", 0)])
-#         mip_solver.variables.set_lower_bounds([("output", -cplex.infinity)])
-#     else:
-#         mip_solver.variables.set_lower_bounds([("output", 0)])
-#         mip_solver.variables.set_upper_bounds([("output", cplex.infinity)])
-
-#     #mip_solver.write("debug.lp")
-
-#     try:
-#         mip_solver.solve()
-#         if mip_solver.solution.get_status_string() == "integer infeasible":
-#             raise CplexError()
-#         # ok
-#         #mus.add(test_feature)
-#         #output = mip_solver.solution.get_values(["output"])
-#         #print("solution exists with output", output)
-#         mus.add(test_feature)
-#         print("MUS", test_feature)
-#     except CplexError:
-#         # no solution
-#         print("DROP", test_feature)
-
-# print(len(mus))
-
-# plt.imshow(X[test_index].reshape((28,28)), cmap='gray')
-# expl = np.array([1 if i in mus else 0 for (i,x) in enumerate(X[0])])
-# plt.imshow(expl.reshape((28,28)), cmap='summer', alpha=0.6)
-# plt.show()
