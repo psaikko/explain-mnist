@@ -1,4 +1,5 @@
-# explain
+# explain-mnist
+
 Experiments in explainable AI with exact optimization tools on the MNIST image dataset. 
 
 Dependencies: 
