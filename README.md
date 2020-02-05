@@ -1,6 +1,7 @@
 # explain-mnist
 
 Experiments in explainable AI with exact optimization tools on the MNIST image dataset. 
+Evaluating the robustness of a classifier based on (provably, globally) smallest adversarial pertubations.
 
 Dependencies: 
 - python3
@@ -18,8 +19,8 @@ Train a simple fully connected neural network with one hidden layer.
 
 `min_explanation.py`
 
-Compute an "explanation" of a prediciton. Given an input image this is a minimal set of pixels which determine the output label, regardless the value of any other pixels. 
-Uses CPLEX as a decision procedure for a "destructive MUS" algorithm.
+Compute an "explanation" of a prediction. Given an input image this is a minimal set of pixels which determine the output label, regardless the value of any other pixels. 
+Uses CPLEX as a decision procedure for a "[destructive MUS](http://gauss.ececs.uc.edu/SAT/proceedings/SAT11/papers/SAT2011-page-156.pdf)" algorithm.
 
 ![](./img/explanation.png)
 
@@ -80,7 +81,7 @@ Computing minimum number of changed pixels instead.
 
 `binary.py`
 
-Implement some encodings of AAAI paper [Verifying Properties of Binarized Deep Neural Networks](https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/16898/16241)
+Implementing the encodings of AAAI paper [Verifying Properties of Binarized Deep Neural Networks](https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/16898/16241)
 - MIP: working
 - IP:  working
 - CNF: producing intractably large formulas
